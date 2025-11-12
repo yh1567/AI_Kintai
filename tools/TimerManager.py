@@ -1,31 +1,68 @@
-import threading      # スレッド（並列処理）を使うためのモジュール
-import time           # 時間管理（現在時刻、スリープなど）用モジュール
+import tkinter as tk
+import threading
+import time
 
-ALWAYS_TIMER = "ALWAYS_TIMER"   # タイマーID（定数）
+ALWAYS_TIMER = "ALWAYS_TIMER"
 
-class TimerProcess:             # タイマー処理をまとめたクラス
-    def __init__(self):
-        self.mStartTime = None          # タイマー開始時刻を保存する変数
-        self.timer_thread = None        # サブスレッド用の変数
-        self.running = False            # タイマーが動作中かどうかのフラグ
+class TimerProcess:
+    def __init__(self, label, button):
+        self.mStartTime = None
+        self.running = False
+        self.timer_thread = None
+        self.label = label  # 経過時間表示用ラベル
+        self.button = button  # ボタン（開始⇔終了）
 
     def initTimer(self):
-        self.mStartTime = time.time()   # 現在時刻を取得して保存（タイマー初期化）
+        self.mStartTime = time.time()
 
-    def startTimer(self, timer_id=ALWAYS_TIMER):
-        if timer_id == ALWAYS_TIMER:    # 指定IDが常時タイマーなら
-            self.running = True         # 動作フラグON
-            self.timer_thread = threading.Thread(target=self.run_timer)  # サブスレッド生成
-            self.timer_thread.start()   # サブスレッド開始
+    def startTimer(self):
+        if not self.running:
+            self.initTimer()
+            self.running = True
+            # ボタンのテキストと動作を「終了」に変更
+            self.button.config(text="終了", command=self.stopTimer)
+            self.timer_thread = threading.Thread(target=self.run_timer, daemon=True)
+            self.timer_thread.start()
 
     def run_timer(self):
-        while self.running:                     # フラグがTrueの間、繰り返す
-            current_time = time.time()          # 現在時刻取得
-            elapsed = current_time - self.mStartTime  # 経過時間計算
-            print(f"[{ALWAYS_TIMER}] 経過時間: {elapsed:.2f}秒")  # 経過時間表示
-            time.sleep(1)                       # 1秒待機（周期的に動作）
+        while self.running:
+            current_time = time.time()
+            elapsed_seconds = int(current_time - self.mStartTime)
+            hours = elapsed_seconds // 3600
+            minutes = (elapsed_seconds % 3600) // 60
+            seconds = elapsed_seconds % 60
+            display_text = f"経過時間：{hours}時間{minutes}分{seconds}秒"
+            # GUIのラベルを更新（スレッドセーフにafterで呼び出し）
+            self.label.after(0, lambda text=display_text: self.label.config(text=text))
+            time.sleep(1)
 
     def stopTimer(self):
-        self.running = False                    # 動作フラグOFFでループ終了
-        if self.timer_thread is not None:       # サブスレッドがあれば
-            self.timer_thread.join()            # サブスレッド終了まで待つ
+        if self.running:
+            self.running = False
+            # ボタンのテキストと動作を「開始」に戻す（停止後すぐ切替）
+            self.button.config(text="開始", command=self.startTimer)
+
+# --- GUI部分 ---
+def main():
+    root = tk.Tk()
+    root.title("タイマー画面")
+    root.geometry("400x200")
+
+    # 経過時間表示ラベル（packで中央下）
+    timer_label = tk.Label(root, text="経過時間：0時間0分0秒", font=("Arial", 32))
+    timer_label.pack(pady=30)
+
+    # 中央に開始ボタン（packで中央配置）
+    start_btn = tk.Button(root, text="開始", font=("Arial", 16))
+    start_btn.pack(pady=10)
+
+    # タイマー処理インスタンス生成（ラベルとボタンを渡す）
+    timer_proc = TimerProcess(timer_label, start_btn)
+
+    # 開始ボタン押下時の動作を設定
+    start_btn.config(command=timer_proc.startTimer)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()

@@ -1,17 +1,19 @@
-# test_timer.py
-
 from TimerManager import TimerProcess
-import time
 
-# TimerProcessのインスタンス生成
-timer = TimerProcess()
-
-# タイマー開始
-timer.start()
-
-# 5回カウントアップしてみる
-for _ in range(5):
-    timer.tick()
-    time.sleep(1)  # 1秒待つ（タイマー感覚を出すため）
-
-print(f"最終カウント値: {timer.get_count()}")
+if __name__ == "__main__":
+    # TimerProcessインスタンス生成
+    timer = TimerProcess()
+    
+    # タイマー初期化（開始時刻をセット）
+    timer.initTimer()
+    
+    # タイマー開始（サブスレッドで経過時間を表示し続ける）
+    timer.startTimer()
+    
+    # メインスレッドで5秒待つ（その間サブスレッドが動く）
+    time.sleep(5)
+    
+    # タイマー停止（サブスレッド終了まで待つ）
+    timer.stopTimer()
+    
+    print("タイマー終了")
